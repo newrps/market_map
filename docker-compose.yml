@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: market-map-backend
+    restart: unless-stopped
+    environment:
+      MARKET_SERVICE_KEY: ${MARKET_SERVICE_KEY}
+      PORT: 8770
+      RUST_LOG: ${RUST_LOG:-info}
+    expose:
+      - "8770"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8770/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - market-map
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: market-map-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${HOST_PORT:-18081}:80"
+    networks:
+      - market-map
+
+networks:
+  market-map:
+    driver: bridge
