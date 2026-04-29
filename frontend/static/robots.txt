@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://zam.zam.kr/sitemap.xml
