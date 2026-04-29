@@ -4,7 +4,6 @@
   import { typeColor } from '$lib/api';
 
   export let markets: Market[] = [];
-  export let highlightTypes: string[] = []; // 활성 필터 (없으면 전체)
 
   const dispatch = createEventDispatcher<{ select: Market }>();
 
@@ -43,11 +42,7 @@
     if (!map || !L) return;
     markersLayer.clearLayers();
 
-    const filtered = highlightTypes.length === 0
-      ? markets
-      : markets.filter((m) => highlightTypes.some((t) => m.market_type.includes(t)));
-
-    for (const m of filtered) {
+    for (const m of markets) {
       if (m.lat == null || m.lon == null) continue;
       if (Math.abs(m.lat) < 1 || Math.abs(m.lon) < 1) continue; // 좌표 0/null 가드
 
@@ -66,7 +61,6 @@
   }
 
   $: if (map && markets) renderMarkers();
-  $: if (map && highlightTypes) renderMarkers();
 </script>
 
 <div class="map" bind:this={mapEl}></div>

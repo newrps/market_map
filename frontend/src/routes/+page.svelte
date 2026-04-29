@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Map from '$lib/components/Map.svelte';
   import MarketDetail from '$lib/components/MarketDetail.svelte';
-  import { fetchMarkets, typeColor } from '$lib/api';
+  import { fetchMarkets, typeCategory } from '$lib/api';
   import type { Market } from '$lib/api';
 
   let markets: Market[] = [];
@@ -10,18 +10,9 @@
   let loadError: string | null = null;
   let loading = true;
 
-  // 시장유형 필터 — 빈 배열이면 전체
-  let activeTypes: string[] = [];
-  let allTypes: string[] = [];
-
   onMount(async () => {
     try {
       markets = await fetchMarkets();
-      const set = new Set<string>();
-      for (const m of markets) {
-        if (m.market_type) set.add(m.market_type);
-      }
-      allTypes = [...set].sort();
     } catch (e: any) {
       loadError = e.message ?? String(e);
     } finally {
@@ -29,25 +20,20 @@
     }
   });
 
-  function toggleType(t: string) {
-    activeTypes = activeTypes.includes(t)
-      ? activeTypes.filter((x) => x !== t)
-      : [...activeTypes, t];
-  }
-
-  $: filteredCount = activeTypes.length === 0
-    ? markets.length
-    : markets.filter((m) => activeTypes.some((t) => m.market_type.includes(t))).length;
+  $: stats = {
+    total: markets.length,
+    sangseol: markets.filter((m) => typeCategory(m.market_type) === '상설장').length,
+    jeonggi: markets.filter((m) => typeCategory(m.market_type) === '정기장').length
+  };
 </script>
 
 <main class="full-map">
   <Map
     {markets}
-    highlightTypes={activeTypes}
     on:select={(e) => (selected = e.detail)}
   />
 
-  <!-- 좌상단 브랜드 + 필터 -->
+  <!-- 좌상단 브랜드 + 작은 범례 -->
   <div class="overlay top-left">
     <div class="brand">
       <svg viewBox="0 0 40 40" class="logo-icon" aria-hidden="true">
@@ -58,24 +44,10 @@
       <h1>Ps전통시장지도</h1>
     </div>
 
-    {#if !loading && allTypes.length > 0}
-      <div class="filter">
-        <button
-          class="chip"
-          class:active={activeTypes.length === 0}
-          on:click={() => (activeTypes = [])}
-        >전체 {markets.length}</button>
-        {#each allTypes as t}
-          <button
-            class="chip"
-            class:active={activeTypes.includes(t)}
-            style="--c: {typeColor(t)}"
-            on:click={() => toggleType(t)}
-          >
-            <span class="dot" style="background: {typeColor(t)}"></span>
-            {t}
-          </button>
-        {/each}
+    {#if !loading && stats.total > 0}
+      <div class="legend">
+        <span class="leg"><i style="background:#2E7D32"></i>상설장 {stats.sangseol}</span>
+        <span class="leg"><i style="background:#FB8C00"></i>3·4·5일장 {stats.jeonggi}</span>
       </div>
     {/if}
   </div>
@@ -90,11 +62,6 @@
     </div>
   {/if}
 
-  {#if !loading && !loadError && filteredCount > 0}
-    <div class="overlay bottom-right hint">
-      {filteredCount}개 시장 표시 중
-    </div>
-  {/if}
 
   {#if selected}
     <MarketDetail market={selected} on:close={() => (selected = null)} />
@@ -150,43 +117,27 @@
     letter-spacing: -0.5px;
   }
 
-  .filter {
+  .legend {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
-    border-radius: 14px;
-    padding: 6px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    max-width: 100%;
-    overflow-x: auto;
-  }
-  .chip {
-    background: transparent;
-    border: 1.5px solid transparent;
     border-radius: 12px;
-    padding: 4px 10px;
-    font-size: 12px;
-    color: #1B5E20;
-    cursor: pointer;
+    padding: 6px 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-family: inherit;
-    font-weight: 500;
-    white-space: nowrap;
-    transition: all 0.12s;
+    gap: 12px;
+    width: fit-content;
+    font-size: 12px;
+    color: #333;
   }
-  .chip:hover { background: rgba(46, 125, 50, 0.08); }
-  .chip.active {
-    background: rgba(46, 125, 50, 0.12);
-    border-color: var(--c, #2E7D32);
-    font-weight: 600;
+  .leg {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
   }
-  .chip .dot {
-    width: 8px;
-    height: 8px;
+  .leg i {
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     display: inline-block;
   }
@@ -209,17 +160,6 @@
     left: 50%;
     transform: translateX(-50%);
   }
-  .bottom-right {
-    bottom: 16px;
-    right: 16px;
-  }
-  .hint {
-    background: rgba(46, 125, 50, 0.85);
-    color: #fff;
-    padding: 6px 12px;
-    border-radius: 14px;
-    font-size: 11px;
-  }
   .error-banner {
     background: #ffebee;
     color: #b71c1c;
@@ -237,6 +177,6 @@
       right: 8px;
     }
     .brand h1 { font-size: 16px; }
-    .filter { font-size: 11px; }
+    .legend { font-size: 11px; gap: 8px; }
   }
 </style>

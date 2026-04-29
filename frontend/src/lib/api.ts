@@ -43,11 +43,14 @@ export async function fetchMerchantsByMarket(marketName: string, regionHint?: st
   return res.json();
 }
 
-// 시장유형별 색상
+// 시장유형 → 큰 카테고리: 상설장 / 정기장(3·4·5일장)
+export type TypeCategory = '상설장' | '정기장';
+
+export function typeCategory(t: string): TypeCategory {
+  // "상설장+4일장" 같은 복합형은 상설로 분류
+  return t.includes('상설') ? '상설장' : '정기장';
+}
+
 export function typeColor(t: string): string {
-  if (t.includes('수산')) return '#0277BD';
-  if (t.includes('상설')) return '#2E7D32';
-  if (t.includes('정기') || t.includes('5일') || t.includes('정기시장')) return '#FB8C00';
-  if (t.includes('농수산')) return '#1B5E20';
-  return '#558B2F';
+  return typeCategory(t) === '상설장' ? '#2E7D32' : '#FB8C00';
 }
