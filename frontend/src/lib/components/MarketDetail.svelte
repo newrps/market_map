@@ -10,8 +10,10 @@
   let merchants: Merchant[] = [];
   let merchantsLoading = false;
   let merchantsError: string | null = null;
-  let showAll = false;
-  const PREVIEW_COUNT = 12;
+  // 무한 스크롤 — 처음 20개 보이고, 스크롤 끝에 가까워지면 20개씩 추가 노출
+  const PAGE_SIZE = 20;
+  let visibleCount = PAGE_SIZE;
+  let listEl: HTMLElement;
 
   $: if (market) loadMerchants(market);
 
@@ -19,7 +21,7 @@
     merchants = [];
     merchantsError = null;
     merchantsLoading = true;
-    showAll = false;
+    visibleCount = PAGE_SIZE;
     const hint = m.address_road ?? m.address_jibun ?? '';
     try {
       const res = await fetchMerchantsByMarket(m.name, hint);
@@ -32,6 +34,16 @@
     }
   }
 
+  function onListScroll(e: Event) {
+    const el = e.currentTarget as HTMLElement;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+      // 바닥 근처 도달 → 페이지 추가
+      if (visibleCount < merchants.length) {
+        visibleCount = Math.min(merchants.length, visibleCount + PAGE_SIZE);
+      }
+    }
+  }
+
   function naverMapUrl(m: Market): string {
     const q = encodeURIComponent(m.address_road ?? m.address_jibun ?? m.name);
     return `https://map.naver.com/p/search/${q}`;
@@ -41,7 +53,7 @@
     return `https://map.kakao.com/?q=${q}`;
   }
 
-  $: visibleMerchants = showAll ? merchants : merchants.slice(0, PREVIEW_COUNT);
+  $: visibleMerchants = merchants.slice(0, visibleCount);
 </script>
 
 <div class="backdrop" on:click={() => dispatch('close')} role="presentation"></div>
@@ -103,7 +115,11 @@
       {:else if merchants.length === 0}
         <div class="state empty">이 시장의 온누리 가맹점 정보 없음</div>
       {:else}
-        <ul class="merchant-list">
+        <ul
+          class="merchant-list"
+          bind:this={listEl}
+          on:scroll={onListScroll}
+        >
           {#each visibleMerchants as m}
             <li>
               <div class="m-name">{m.name}</div>
@@ -116,12 +132,12 @@
               </div>
             </li>
           {/each}
+          {#if visibleCount < merchants.length}
+            <li class="loading-row">⌛ {merchants.length - visibleCount}개 더…</li>
+          {:else if merchants.length > PAGE_SIZE}
+            <li class="end-row">— 모두 표시됨 ({merchants.length}개) —</li>
+          {/if}
         </ul>
-        {#if merchants.length > PREVIEW_COUNT}
-          <button class="more-btn" on:click={() => (showAll = !showAll)}>
-            {showAll ? '접기' : `+${merchants.length - PREVIEW_COUNT}개 더 보기`}
-          </button>
-        {/if}
       {/if}
     </section>
   </div>
@@ -320,18 +336,13 @@
     display: inline-flex;
     gap: 2px;
   }
-  .more-btn {
-    width: 100%;
-    background: transparent;
-    border: 1px solid #2E7D32;
-    color: #2E7D32;
-    border-radius: 8px;
-    padding: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    margin-top: 6px;
-    cursor: pointer;
-    font-family: inherit;
+  .loading-row,
+  .end-row {
+    text-align: center;
+    color: #999;
+    font-size: 11px;
+    background: #fafafa;
+    padding: 8px 6px;
   }
-  .more-btn:hover { background: rgba(46, 125, 50, 0.08); }
+  .end-row { color: #bbb; font-style: italic; }
 </style>
