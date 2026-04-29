@@ -33,11 +33,11 @@
   }
 
   function naverMapUrl(m: Market): string {
-    const q = encodeURIComponent(`${m.name} ${m.address_road ?? m.address_jibun ?? ''}`);
+    const q = encodeURIComponent(m.address_road ?? m.address_jibun ?? m.name);
     return `https://map.naver.com/p/search/${q}`;
   }
   function kakaoMapUrl(m: Market): string {
-    const q = encodeURIComponent(m.name);
+    const q = encodeURIComponent(m.address_road ?? m.address_jibun ?? m.name);
     return `https://map.kakao.com/?q=${q}`;
   }
 
